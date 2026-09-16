@@ -1,21 +1,32 @@
-# Configuración inicial de AWS y empaquetado de Lambda
-
 provider "aws" {
-  region = "us-east-1" # Cambia esto si usas otra región
+  region = "us-east-1"
 }
 
-# Empaquetar la función Python en un .zip
+# 1. Empaquetar el código de Python automáticamente
 
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_file = "${path.module}/../backend/lambda_function.py"
+  source_dir  = "${path.module}/../backend"
   output_path = "${path.module}/lambda_function.zip"
 }
 
-# Configuración de Roles y Permisos IAM
+# 2. Base de datos DynamoDB para el contador global
+
+resource "aws_dynamodb_table" "gritos_table" {
+  name         = "GritosTotales"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+}
+
+# 3. Rol IAM y permisos para la Lambda
 
 resource "aws_iam_role" "lambda_exec" {
-  name = "el_grito_lambda_role"
+  name = "serverless_grito_role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -29,12 +40,33 @@ resource "aws_iam_role" "lambda_exec" {
   })
 }
 
+# Permiso básico para escribir logs en CloudWatch
+
 resource "aws_iam_role_policy_attachment" "lambda_policy" {
   role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Creación del recurso AWS Lambda
+# Permiso específico para que la Lambda lea y escriba en DynamoDB
+
+resource "aws_iam_role_policy" "dynamodb_policy" {
+  name = "lambda_dynamodb_policy"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "dynamodb:UpdateItem",
+        "dynamodb:GetItem"
+      ]
+      Resource = aws_dynamodb_table.gritos_table.arn
+    }]
+  })
+}
+
+# 4. Creación del recurso AWS Lambda
 
 resource "aws_lambda_function" "grito_lambda" {
   filename         = data.archive_file.lambda_zip.output_path
@@ -43,23 +75,27 @@ resource "aws_lambda_function" "grito_lambda" {
   handler          = "lambda_function.lambda_handler"
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
   runtime          = "python3.12"
+
+  environment {
+    variables = {
+      TABLE_NAME = aws_dynamodb_table.gritos_table.name
+    }
+  }
 }
 
-# Configuración de API Gateway HTTP (Más barato y rápido)
+# 5. Configuración de API Gateway HTTP (Más barato y rápido)
 
 resource "aws_apigatewayv2_api" "grito_api" {
   name          = "ElGritoAPI"
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_origins = ["*"]
-    allow_methods = ["POST", "OPTIONS"]
+    allow_origins = ["*"] # Para producción usarías tu dominio exacto de GitHub Pages
+    allow_methods = ["GET", "POST", "OPTIONS"]
     allow_headers = ["content-type"]
     max_age       = 300
   }
 }
-
-# Integración de API Gateway con Lambda
 
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.grito_api.id
@@ -68,17 +104,30 @@ resource "aws_apigatewayv2_stage" "default" {
 }
 
 resource "aws_apigatewayv2_integration" "lambda_integration" {
-  api_id             = aws_apigatewayv2_api.grito_api.id
-  integration_type   = "AWS_PROXY"
-  integration_method = "POST"
-  integration_uri    = aws_lambda_function.grito_lambda.invoke_arn
+  api_id                 = aws_apigatewayv2_api.grito_api.id
+  integration_type       = "AWS_PROXY"
+  integration_method     = "POST"
+  integration_uri        = aws_lambda_function.grito_lambda.invoke_arn
+  payload_format_version = "2.0"
 }
+
+# Ruta POST para recibir el grito
 
 resource "aws_apigatewayv2_route" "post_grito" {
   api_id    = aws_apigatewayv2_api.grito_api.id
   route_key = "POST /grito"
   target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
 }
+
+# Ruta GET para cargar el contador al entrar a la web
+
+resource "aws_apigatewayv2_route" "get_grito" {
+  api_id    = aws_apigatewayv2_api.grito_api.id
+  route_key = "GET /grito"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+}
+
+# Permiso para que API Gateway invoque la Lambda
 
 resource "aws_lambda_permission" "api_gw" {
   statement_id  = "AllowExecutionFromAPIGateway"
@@ -88,9 +137,8 @@ resource "aws_lambda_permission" "api_gw" {
   source_arn    = "${aws_apigatewayv2_api.grito_api.execution_arn}//*"
 }
 
-# Output de la URL para usar en tu frontend
+# 6. Imprimir la URL final en la consola al terminar
 
 output "api_gateway_url" {
-  value       = "${aws_apigatewayv2_api.grito_api.api_endpoint}/grito"
-  description = "Pega esta URL en tu archivo index.html"
+  value = "${aws_apigatewayv2_api.grito_api.api_endpoint}/grito"
 }

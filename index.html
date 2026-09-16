@@ -132,37 +132,36 @@
             <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
         </button>
 
-        <!-- Contador -->
+        <!-- Contador DynamoDB Global -->
         <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
             <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Gritos Virtuales Registrados</p>
             <div class="flex items-center justify-center gap-3">
                 <span id="counter" class="text-5xl font-black text-gray-800 tabular-nums">0</span>
             </div>
-            <p id="loadingText" class="text-xs text-mexico-green mt-2 h-4 opacity-0 transition-opacity">Enviando evento a AWS...</p>
+            <p id="loadingText" class="text-xs text-mexico-green mt-2 h-4 opacity-0 transition-opacity">Sincronizando con DynamoDB...</p>
         </div>
 
-        <!-- Footer / Créditos -->
+        <!-- Footer -->
         <div class="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-sm text-gray-500">
             <div class="flex items-center gap-1">
-                <a href="https://github.com/CodeByPablo" target="_blank" rel="noopener noreferrer" class="font-bold text-mexico-green hover:underline hover:text-mexico-red transition-colors">Code by Pablo</a>
+                <a href="https://github.com/TU_USUARIO_GITHUB" target="_blank" rel="noopener noreferrer" class="font-bold text-mexico-green hover:underline hover:text-mexico-red transition-colors">Tu Nombre</a>
             </div>
             <span class="hidden sm:inline">|</span>
             <div class="flex items-center gap-1">
                 <span>Powered by</span>
-                <span class="font-bold text-gray-700">AWS Lambda & API Gateway</span>
+                <span class="font-bold text-gray-700">AWS Lambda & DynamoDB</span>
                 <span>🚀</span>
             </div>
         </div>
     </main>
 
-    <!-- Notificación Toast para feedback de AWS -->
+    <!-- Notificación Toast -->
     <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-3 z-50">
         <span id="toastIcon">✅</span>
         <span id="toastMessage" class="text-sm font-medium">¡Evento registrado con éxito!</span>
     </div>
 
     <script>
-        // Referencias a elementos del DOM
         const gritoBtn = document.getElementById('gritoBtn');
         const counterEl = document.getElementById('counter');
         const loadingText = document.getElementById('loadingText');
@@ -170,8 +169,61 @@
         const toastMessage = document.getElementById('toastMessage');
         const toastIcon = document.getElementById('toastIcon');
 
-        // Estado local (En una app real, esto podría venir de una base de datos DynamoDB al cargar la página)
+        // ! IMPORTANTE: PEGA AQUÍ TU URL FINAL AL HACER TERRAFORM APPLY !
+        const AWS_API_URL = 'https://0wvh5oowag.execute-api.us-east-1.amazonaws.com/grito';
+
         let count = 0;
+
+        /**
+         * Petición GET: Obtiene el contador actual al cargar la página
+         */
+        async function fetchInitialCount() {
+            if (!AWS_API_URL || AWS_API_URL.includes('TU_API_ID')) return;
+            
+            try {
+                const response = await fetch(AWS_API_URL);
+                if (response.ok) {
+                    const data = await response.json();
+                    count = data.total || 0;
+                    counterEl.textContent = count;
+                }
+            } catch (error) {
+                console.error("Error obteniendo contador global de DynamoDB:", error);
+            }
+        }
+        
+        fetchInitialCount();
+
+        /**
+         * Petición POST: Envía el grito y actualiza el contador
+         */
+        async function sendGritoToAWS() {
+            if (!AWS_API_URL || AWS_API_URL.includes('TU_API_ID')) {
+                console.log("Simulando llamada a AWS (Falta configurar URL)");
+                return new Promise(resolve => setTimeout(() => resolve({ success: true, data: { total: count + 1 } }), 600));
+            }
+
+            try {
+                const payload = {
+                    event: "el_grito",
+                    timestamp: new Date().toISOString()
+                };
+
+                const response = await fetch(AWS_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const data = await response.json();
+                return { success: true, data };
+            } catch (error) {
+                console.error("Error al conectar con AWS:", error);
+                return { success: false, error };
+            }
+        }
 
         /**
          * Lógica del Contador para el 15 de Septiembre a las 23:00 hrs
@@ -179,10 +231,8 @@
         function updateCountdown() {
             const now = new Date();
             let targetYear = now.getFullYear();
-            // Meses en JS son 0-indexados. Septiembre es 8. Día 15. Hora 23:00:00
             let targetDate = new Date(targetYear, 8, 15, 23, 0, 0); 
 
-            // Si ya pasó el grito de este año, apuntamos al del próximo año
             if (now > targetDate) {
                 targetYear++;
                 targetDate = new Date(targetYear, 8, 15, 23, 0, 0);
@@ -201,51 +251,36 @@
             document.getElementById('cd-seconds').textContent = String(seconds).padStart(2, '0');
         }
 
-        // Iniciar el contador
         setInterval(updateCountdown, 1000);
         updateCountdown();
 
         /**
-         * Genera un sonido festivo estilo "trompeta de mariachi" usando Tone.js
+         * Efectos de Audio y Visuales
          */
         async function playMariachiSound() {
             try {
                 await Tone.start();
-                // Sintetizador con tono brillante (sawtooth) simulando trompetas/metales
                 const synth = new Tone.PolySynth(Tone.Synth, {
                     oscillator: { type: "sawtooth" },
                     envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 1 }
                 }).toDestination();
-                
-                synth.volume.value = -6; // Reducir un poco el volumen
-                
+                synth.volume.value = -6;
                 const now = Tone.now();
-                // Secuencia clásica de fanfarria (Ta-Ta-Taaaaa)
                 synth.triggerAttackRelease("G4", "8n", now);
                 synth.triggerAttackRelease("G4", "8n", now + 0.15);
                 synth.triggerAttackRelease("C5", "2n", now + 0.3);
-                synth.triggerAttackRelease(["E5", "G5"], "2n", now + 0.5); // Acorde final festivo
+                synth.triggerAttackRelease(["E5", "G5"], "2n", now + 0.5);
             } catch (error) {
-                console.log("Audio desactivado o bloqueado por el navegador", error);
+                console.log("Audio desactivado", error);
             }
         }
 
-        /**
-         * Lanza la animación de confeti con los colores de México
-         */
         function fireFestiveConfetti() {
             const count = 200;
-            const defaults = {
-                origin: { y: 0.7 },
-                colors: ['#006847', '#FFFFFF', '#CE1126'] // Verde, Blanco, Rojo
-            };
-
+            const defaults = { origin: { y: 0.7 }, colors: ['#006847', '#FFFFFF', '#CE1126'] };
             function fire(particleRatio, opts) {
-                confetti(Object.assign({}, defaults, opts, {
-                    particleCount: Math.floor(count * particleRatio)
-                }));
+                confetti(Object.assign({}, defaults, opts, { particleCount: Math.floor(count * particleRatio) }));
             }
-
             fire(0.25, { spread: 26, startVelocity: 55 });
             fire(0.2, { spread: 60 });
             fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
@@ -253,107 +288,42 @@
             fire(0.1, { spread: 120, startVelocity: 45 });
         }
 
-        /**
-         * Muestra una notificación tipo Toast (para no usar alert())
-         */
         function showToast(message, type = 'success') {
             toastMessage.textContent = message;
             toastIcon.textContent = type === 'success' ? '✅' : '⚠️';
-            
-            if (type === 'error') {
-                toast.classList.replace('bg-gray-900', 'bg-mexico-red');
-            } else {
-                toast.classList.replace('bg-mexico-red', 'bg-gray-900');
-            }
-
+            toast.classList.replace(type === 'error' ? 'bg-gray-900' : 'bg-mexico-red', type === 'error' ? 'bg-mexico-red' : 'bg-gray-900');
             toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
         /**
-         * ☁️ INTEGRACIÓN CON AWS ☁️
-         * 
-         * 1. Crea un API Gateway (HTTP API o REST API).
-         * 2. Conéctalo a tu función AWS Lambda.
-         * 3. Permite CORS en tu API Gateway.
-         * 4. Reemplaza la variable 'AWS_API_URL' con tu endpoint real.
-         */
-        async function sendGritoToAWS() {
-            const AWS_API_URL = 'https://0wvh5oowag.execute-api.us-east-1.amazonaws.com/grito'; 
-            
-            // Si no hay URL configurada, simulamos el éxito localmente para demostración
-            if (!AWS_API_URL) {
-                console.log("Modo local: Simulando llamada a AWS...");
-                return new Promise(resolve => setTimeout(() => resolve({ success: true }), 600));
-            }
-
-            try {
-                // Configura tu payload aquí
-                const payload = {
-                    event: "el_grito",
-                    timestamp: new Date().toISOString(),
-                    source: "web_ui"
-                };
-
-                const response = await fetch(AWS_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                console.log("Respuesta de AWS Lambda:", data);
-                return { success: true, data };
-
-            } catch (error) {
-                console.error("Error al conectar con AWS:", error);
-                return { success: false, error };
-            }
-        }
-
-        /**
-         * Manejador del evento Clic
+         * Manejador del Botón
          */
         gritoBtn.addEventListener('click', async () => {
-            // Deshabilitar botón temporalmente para evitar spam
             gritoBtn.disabled = true;
             gritoBtn.classList.add('opacity-80', 'cursor-not-allowed');
             loadingText.classList.remove('opacity-0');
 
-            // 1. Llamar a tu backend en AWS
             const result = await sendGritoToAWS();
 
             if (result.success) {
-                // 2. Éxito: Animación, sonido y actualizar contador
                 playMariachiSound();
                 fireFestiveConfetti();
-                count++;
                 
-                // Efecto de animación en el número
+                count = result.data.total;
                 counterEl.style.transform = 'scale(1.5)';
-                counterEl.style.color = '#006847'; // Verde
+                counterEl.style.color = '#006847';
                 counterEl.textContent = count;
-                
                 setTimeout(() => {
                     counterEl.style.transform = 'scale(1)';
-                    counterEl.style.color = '#1f2937'; // Gris oscuro original
+                    counterEl.style.color = '#1f2937';
                 }, 300);
 
-                showToast('¡Grito enviado a la nube! ¡Viva México!');
+                showToast('¡Grito enviado a la base de datos! ¡Viva México!');
             } else {
-                // Error de conexión
                 showToast('Error al conectar con AWS API Gateway.', 'error');
             }
 
-            // Restaurar estado del botón
             loadingText.classList.add('opacity-0');
             gritoBtn.disabled = false;
             gritoBtn.classList.remove('opacity-80', 'cursor-not-allowed');
