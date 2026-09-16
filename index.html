@@ -5,16 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>¡El Grito Automático! - AWS Serverless</title>
     
-    <!-- Tailwind CSS para el diseño responsivo y rápido -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts para una tipografía moderna y atractiva -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
-    
-    <!-- Canvas Confetti para la animación festiva -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
-    <!-- Tone.js para efectos de sonido sintetizados en el navegador -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 
     <script>
@@ -22,25 +15,16 @@
             theme: {
                 extend: {
                     colors: {
-                        mexico: {
-                            green: '#006847',
-                            red: '#CE1126',
-                            white: '#FFFFFF'
-                        }
+                        mexico: { green: '#006847', red: '#CE1126', white: '#FFFFFF' }
                     },
-                    fontFamily: {
-                        sans: ['Poppins', 'sans-serif'],
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] },
+                    animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
                 }
             }
         }
     </script>
     <style>
         body {
-            /* Fondo sutil con los colores de la bandera difuminados */
             background: linear-gradient(135deg, rgba(0,104,71,0.05) 0%, rgba(255,255,255,1) 50%, rgba(206,17,38,0.05) 100%);
             min-height: 100vh;
         }
@@ -58,17 +42,16 @@
             box-shadow: 0 10px 25px -5px rgba(206, 17, 38, 0.5);
         }
 
-        .btn-grito:hover {
+        .btn-grito:hover:not(:disabled) {
             transform: translateY(-5px) scale(1.02);
             box-shadow: 0 20px 30px -5px rgba(206, 17, 38, 0.6);
         }
 
-        .btn-grito:active {
+        .btn-grito:active:not(:disabled) {
             transform: translateY(2px) scale(0.98);
             box-shadow: 0 5px 10px -5px rgba(206, 17, 38, 0.5);
         }
 
-        /* Toast notification styles */
         #toast {
             visibility: hidden;
             opacity: 0;
@@ -83,14 +66,12 @@
 <body class="flex flex-col items-center justify-center p-4 font-sans text-gray-800">
 
     <main class="glass-card w-full max-w-lg rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
-        <!-- Decoración superior (Bandera) -->
         <div class="absolute top-0 left-0 w-full h-3 flex">
             <div class="h-full w-1/3 bg-mexico-green"></div>
             <div class="h-full w-1/3 bg-mexico-white"></div>
             <div class="h-full w-1/3 bg-mexico-red"></div>
         </div>
 
-        <!-- Encabezado -->
         <div class="mt-4 mb-8">
             <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">15 de Septiembre</h2>
             <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
@@ -99,7 +80,7 @@
             <p class="text-gray-600">Presiona el botón para enviar tu Grito a la nube mediante AWS Serverless.</p>
         </div>
 
-        <!-- Contador de Tiempo para el Grito -->
+        <!-- Countdown -->
         <div class="flex justify-center gap-2 sm:gap-4 mb-8">
             <div class="flex flex-col items-center">
                 <div class="bg-gray-100 rounded-xl p-3 w-16 sm:w-20 shadow-inner border border-gray-200 text-2xl sm:text-3xl font-bold text-gray-800 tabular-nums flex items-center justify-center" id="cd-days">00</div>
@@ -122,17 +103,14 @@
             </div>
         </div>
 
-        <!-- Botón Principal -->
         <button id="gritoBtn" class="btn-grito relative w-full sm:w-auto px-12 py-6 rounded-full text-white text-2xl font-bold uppercase tracking-wider mb-10 overflow-hidden group focus:outline-none focus:ring-4 focus:ring-red-300">
-            <span class="relative z-10 flex items-center justify-center gap-2">
+            <span class="relative z-10 flex items-center justify-center gap-2" id="btnText">
                 ¡Dar el Grito!
-                <svg class="w-6 h-6 animate-pulse-slow" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg>
+                <svg id="btnIcon" class="w-6 h-6 animate-pulse-slow" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg>
             </span>
-            <!-- Efecto de brillo interior -->
             <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
         </button>
 
-        <!-- Contador DynamoDB Global -->
         <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
             <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Gritos Virtuales Registrados</p>
             <div class="flex items-center justify-center gap-3">
@@ -141,10 +119,9 @@
             <p id="loadingText" class="text-xs text-mexico-green mt-2 h-4 opacity-0 transition-opacity">Sincronizando con DynamoDB...</p>
         </div>
 
-        <!-- Footer -->
         <div class="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-sm text-gray-500">
             <div class="flex items-center gap-1">
-                <a href="https://github.com/TU_USUARIO_GITHUB" target="_blank" rel="noopener noreferrer" class="font-bold text-mexico-green hover:underline hover:text-mexico-red transition-colors">Tu Nombre</a>
+                <a href="https://github.com/codebypablo" target="_blank" rel="noopener noreferrer" class="font-bold text-mexico-green hover:underline hover:text-mexico-red transition-colors">Code by Pablo</a>
             </div>
             <span class="hidden sm:inline">|</span>
             <div class="flex items-center gap-1">
@@ -155,7 +132,6 @@
         </div>
     </main>
 
-    <!-- Notificación Toast -->
     <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-3 z-50">
         <span id="toastIcon">✅</span>
         <span id="toastMessage" class="text-sm font-medium">¡Evento registrado con éxito!</span>
@@ -168,18 +144,16 @@
         const toast = document.getElementById('toast');
         const toastMessage = document.getElementById('toastMessage');
         const toastIcon = document.getElementById('toastIcon');
+        const btnText = document.getElementById('btnText');
 
-        // ! IMPORTANTE: PEGA AQUÍ TU URL FINAL AL HACER TERRAFORM APPLY !
-        const AWS_API_URL = 'https://0wvh5oowag.execute-api.us-east-1.amazonaws.com/grito';
+        // ! REEMPLAZA CON TU URL FINAL DE API GATEWAY !
+        const AWS_API_URL = 'https://TU_API_ID.execute-api.us-east-1.amazonaws.com/grito'; 
 
         let count = 0;
+        const COOLDOWN_SECONDS = 30; // Tiempo de espera entre clics
 
-        /**
-         * Petición GET: Obtiene el contador actual al cargar la página
-         */
         async function fetchInitialCount() {
             if (!AWS_API_URL || AWS_API_URL.includes('TU_API_ID')) return;
-            
             try {
                 const response = await fetch(AWS_API_URL);
                 if (response.ok) {
@@ -188,75 +162,50 @@
                     counterEl.textContent = count;
                 }
             } catch (error) {
-                console.error("Error obteniendo contador global de DynamoDB:", error);
+                console.error("Error obteniendo contador:", error);
             }
         }
         
         fetchInitialCount();
 
-        /**
-         * Petición POST: Envía el grito y actualiza el contador
-         */
         async function sendGritoToAWS() {
-            if (!AWS_API_URL || AWS_API_URL.includes('TU_API_ID')) {
-                console.log("Simulando llamada a AWS (Falta configurar URL)");
-                return new Promise(resolve => setTimeout(() => resolve({ success: true, data: { total: count + 1 } }), 600));
-            }
-
             try {
-                const payload = {
-                    event: "el_grito",
-                    timestamp: new Date().toISOString()
-                };
-
                 const response = await fetch(AWS_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ event: "el_grito", timestamp: new Date().toISOString() })
                 });
-
+                
+                if (response.status === 429) {
+                    throw new Error("¡Demasiados gritos al mismo tiempo! Trata en unos segundos.");
+                }
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
                 const data = await response.json();
                 return { success: true, data };
             } catch (error) {
-                console.error("Error al conectar con AWS:", error);
-                return { success: false, error };
+                return { success: false, error: error.message };
             }
         }
 
-        /**
-         * Lógica del Contador para el 15 de Septiembre a las 23:00 hrs
-         */
         function updateCountdown() {
             const now = new Date();
             let targetYear = now.getFullYear();
             let targetDate = new Date(targetYear, 8, 15, 23, 0, 0); 
-
             if (now > targetDate) {
                 targetYear++;
                 targetDate = new Date(targetYear, 8, 15, 23, 0, 0);
             }
-
             const diff = targetDate - now;
-
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-            const minutes = Math.floor((diff / 1000 / 60) % 60);
-            const seconds = Math.floor((diff / 1000) % 60);
-
-            document.getElementById('cd-days').textContent = String(days).padStart(2, '0');
-            document.getElementById('cd-hours').textContent = String(hours).padStart(2, '0');
-            document.getElementById('cd-minutes').textContent = String(minutes).padStart(2, '0');
-            document.getElementById('cd-seconds').textContent = String(seconds).padStart(2, '0');
+            document.getElementById('cd-days').textContent = String(Math.floor(diff / (1000 * 60 * 60 * 24))).padStart(2, '0');
+            document.getElementById('cd-hours').textContent = String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, '0');
+            document.getElementById('cd-minutes').textContent = String(Math.floor((diff / 1000 / 60) % 60)).padStart(2, '0');
+            document.getElementById('cd-seconds').textContent = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
         }
 
         setInterval(updateCountdown, 1000);
         updateCountdown();
 
-        /**
-         * Efectos de Audio y Visuales
-         */
         async function playMariachiSound() {
             try {
                 await Tone.start();
@@ -270,22 +219,13 @@
                 synth.triggerAttackRelease("G4", "8n", now + 0.15);
                 synth.triggerAttackRelease("C5", "2n", now + 0.3);
                 synth.triggerAttackRelease(["E5", "G5"], "2n", now + 0.5);
-            } catch (error) {
-                console.log("Audio desactivado", error);
-            }
+            } catch (error) { console.log("Audio desactivado"); }
         }
 
         function fireFestiveConfetti() {
-            const count = 200;
             const defaults = { origin: { y: 0.7 }, colors: ['#006847', '#FFFFFF', '#CE1126'] };
-            function fire(particleRatio, opts) {
-                confetti(Object.assign({}, defaults, opts, { particleCount: Math.floor(count * particleRatio) }));
-            }
-            fire(0.25, { spread: 26, startVelocity: 55 });
-            fire(0.2, { spread: 60 });
-            fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
-            fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
-            fire(0.1, { spread: 120, startVelocity: 45 });
+            function fire(particleRatio, opts) { confetti(Object.assign({}, defaults, opts, { particleCount: Math.floor(200 * particleRatio) })); }
+            fire(0.25, { spread: 26, startVelocity: 55 }); fire(0.2, { spread: 60 }); fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
         }
 
         function showToast(message, type = 'success') {
@@ -293,13 +233,20 @@
             toastIcon.textContent = type === 'success' ? '✅' : '⚠️';
             toast.classList.replace(type === 'error' ? 'bg-gray-900' : 'bg-mexico-red', type === 'error' ? 'bg-mexico-red' : 'bg-gray-900');
             toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
+            setTimeout(() => toast.classList.remove('show'), 4000);
         }
 
-        /**
-         * Manejador del Botón
-         */
         gritoBtn.addEventListener('click', async () => {
+            // CAPA DE SEGURIDAD 1: Validación Frontend (Cooldown de 30 segundos)
+            const lastGrito = localStorage.getItem('lastGritoTime');
+            const now = new Date().getTime();
+            
+            if (lastGrito && (now - parseInt(lastGrito)) < (COOLDOWN_SECONDS * 1000)) {
+                const remaining = Math.ceil((COOLDOWN_SECONDS * 1000 - (now - parseInt(lastGrito))) / 1000);
+                showToast(`¡Guarda aire! Espera ${remaining} segundos para volver a gritar.`, 'error');
+                return;
+            }
+
             gritoBtn.disabled = true;
             gritoBtn.classList.add('opacity-80', 'cursor-not-allowed');
             loadingText.classList.remove('opacity-0');
@@ -307,6 +254,9 @@
             const result = await sendGritoToAWS();
 
             if (result.success) {
+                // Registrar el tiempo del clic exitoso en el navegador
+                localStorage.setItem('lastGritoTime', new Date().getTime());
+                
                 playMariachiSound();
                 fireFestiveConfetti();
                 
@@ -321,7 +271,7 @@
 
                 showToast('¡Grito enviado a la base de datos! ¡Viva México!');
             } else {
-                showToast('Error al conectar con AWS API Gateway.', 'error');
+                showToast(result.error || 'Error al conectar con AWS.', 'error');
             }
 
             loadingText.classList.add('opacity-0');
