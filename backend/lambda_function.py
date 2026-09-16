@@ -13,7 +13,8 @@ def lambda_handler(event, context):
         'headers': {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Headers': 'Content-Type',
-            'Access-Control-Allow-Methods': 'OPTIONS,POST'
+            'Access-Control-Allow-Methods': 'OPTIONS,POST',
+            'Content-Type': 'application/json' 
         },
-        'body': json.dumps('¡Viva México! Grito procesado exitosamente en AWS.')
+        'body': json.dumps({'message': '¡Viva México! Evento registrado.'})
     }
