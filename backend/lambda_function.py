@@ -39,7 +39,10 @@ def lambda_handler(event, context):
             logger.info("¡Grito de Independencia recibido!")
             response = table.update_item(
                 Key={'id': 'counter'},
-                UpdateExpression="ADD total :inc",
+                # Use a placeholder like #t instead of total
+                UpdateExpression="ADD #t :inc",
+                # Map the placeholder to the actual attribute name
+                ExpressionAttributeNames={'#t': 'total'},
                 ExpressionAttributeValues={':inc': 1},
                 ReturnValues="UPDATED_NEW" # Devuelve el nuevo total inmediatamente
             )
